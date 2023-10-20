@@ -1,5 +1,4 @@
 'use client'
-
 import { configureChains, WagmiConfig } from 'wagmi'
 import { publicProvider } from 'wagmi/providers/public'
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from '@/utils/site'
@@ -7,7 +6,7 @@ import { PropsWithChildren, useEffect, useState } from 'react'
 import { createWeb3Modal, defaultWagmiConfig } from '@web3modal/wagmi/react'
 import { ETH_CHAINS } from '@/utils/network'
 
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? ''
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || ''
 if (!projectId) {
   console.warn('You need to provide a NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID env variable')
 }

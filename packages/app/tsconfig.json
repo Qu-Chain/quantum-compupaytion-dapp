@@ -14,6 +14,6 @@
   "ts-node": {
     "require": ["tsconfig-paths/register"]
   },
-  "include": ["next-env.d.ts", "src", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "src", ".next/types/**/*.ts", "../../process-env-d-ts"],
   "exclude": ["node_modules"]
 }
