@@ -1,11 +1,17 @@
 import { ethers, network, run } from 'hardhat'
+import fs from 'fs'
 
 const routerAddress: Record<string, string> = {
-  polygonMumbai: '0x6E2dc0F9DB014aE19888F539E59285D2Ea04244C',
+  maticmum: '0x6E2dc0F9DB014aE19888F539E59285D2Ea04244C',
 }
+
+const donId = 'fun-polygon-mumbai-1'
+const gasLimit = 300000
+const subscriptionId = 469
 
 async function main() {
   const networkName = (await ethers.provider.getNetwork()).name
+
   if (!routerAddress[networkName]) {
     throw 'Unsupported network'
   }
@@ -21,7 +27,7 @@ async function main() {
   console.log(`Quantum Oracle deployed to ${quantumOracle.address}`)
 
   // no need to verify on localhost or hardhat
-  if (network.config.chainId != 31337 && process.env.ETHERSCAN_API_KEY) {
+  if (network.config.chainId != 31337 && process.env.POLYGONSCAN_API_KEY) {
     console.log(`Waiting for block confirmation...`)
     await quantumOracle.deployTransaction.wait(5)
 
@@ -35,6 +41,17 @@ async function main() {
       console.log(e)
     }
   }
+
+  // configure the parameters for the chainlink functions
+  const addCircuitSourceCode = fs.readFileSync('./functions_source_code/AddCircuit.js').toString()
+  const fetchResultSourceCode = fs.readFileSync('./functions_source_code/FetchResult.js').toString()
+
+  await quantumOracle.updateSourceForAddingCircuit(addCircuitSourceCode)
+  await quantumOracle.updateSourceForFetchingResult(fetchResultSourceCode)
+  await quantumOracle.setDONConfig(0, 0, ethers.utils.formatBytes32String(donId))
+  await quantumOracle.setGasLimitForUpdatingJobID(gasLimit)
+  await quantumOracle.setGasLimitForUpdatingResult(gasLimit)
+  await quantumOracle.setSubscriptionId(subscriptionId)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

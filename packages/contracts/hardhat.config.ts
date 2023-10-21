@@ -4,6 +4,8 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
+console.log(process.env.POLYGON_MUMBAI_RPC)
+
 const config: HardhatUserConfig = {
   solidity: {
     version: '0.8.20',
@@ -18,6 +20,11 @@ const config: HardhatUserConfig = {
     polygonMumbai: {
       url: process.env.POLYGON_MUMBAI_RPC || '',
       accounts: [process.env.PRIVATE_KEY || ''],
+    },
+  },
+  etherscan: {
+    apiKey: {
+      polygonMumbai: process.env.POLYGONSCAN_API_KEY || '',
     },
   },
 }

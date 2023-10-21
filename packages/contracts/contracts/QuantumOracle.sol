@@ -97,7 +97,7 @@ contract QuantumOracle is FunctionsClient, Ownable {
     if (calculateCost(circuitQASM) != msg.value) revert InvalidValueSent();
 
     // send the circuit to chainlink
-    string[1] memory args;
+    string[] memory args = new string[](1);
     args[0] = circuitQASM;
     sendRequest(sourceForAddingCircuit, args, gasLimitForUpdatingJobID);
 
@@ -113,7 +113,7 @@ contract QuantumOracle is FunctionsClient, Ownable {
     string memory jobId = jobIds[circuitHash];
     string memory circuitQASM = circuits[circuitHash];
     // send the result request to chainlink
-    string[2] memory args;
+    string[] memory args = new string[](2);
     args[0] = circuitQASM;
     args[1] = jobId;
     sendRequest(sourceForFetchingResult, args, gasLimitForUpdatingResult);
