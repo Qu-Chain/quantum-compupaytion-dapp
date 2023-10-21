@@ -1,5 +1,12 @@
 import { useDebounce } from 'use-debounce'
-import { useAccount, useBalance, usePrepareSendTransaction, useSendTransaction, useWaitForTransaction, useNetwork } from 'wagmi'
+import {
+  useAccount,
+  useBalance,
+  usePrepareSendTransaction,
+  useSendTransaction,
+  useWaitForTransaction,
+  useNetwork,
+} from 'wagmi'
 import { Button, FormControl, FormLabel, Heading, Input, NumberInput, NumberInputField, Text } from '@chakra-ui/react'
 import { useState } from 'react'
 import { NextSeo } from 'next-seo'
@@ -26,7 +33,10 @@ function SendEther() {
     },
   })
   const sendTransaction = useSendTransaction(prepareSendTransaction.config)
-  const waitForTransaction = useWaitForTransaction({ hash: sendTransaction.data?.hash, onSettled: () => balance.refetch() })
+  const waitForTransaction = useWaitForTransaction({
+    hash: sendTransaction.data?.hash,
+    onSettled: () => balance.refetch(),
+  })
 
   const handleSendTransation = () => {
     sendTransaction.sendTransaction?.()
@@ -34,44 +44,52 @@ function SendEther() {
 
   return (
     <div>
-      <Heading as="h3" fontSize="xl" my={4}>
-        Send Ether
+      <Heading as='h3' fontSize='xl' my={4}>
+        Submit Quantum Circuit
       </Heading>
 
       <FormControl>
         <FormLabel>Recipient</FormLabel>
-        <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="0xA0Cf…251e" />
+        <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder='0xA0Cf…251e' />
 
         <FormLabel mt={2}>Amount</FormLabel>
         <NumberInput mb={2} value={amount} onChange={(value) => setAmount(value)}>
-          <NumberInputField placeholder="0.05" />
+          <NumberInputField placeholder='0.05' />
         </NumberInput>
         <Text>
           Your balance: {balance.data?.formatted} {balance.data?.symbol}
         </Text>
 
         <Button
-          disabled={waitForTransaction.isLoading || sendTransaction.isLoading || !sendTransaction.sendTransaction || !to || !amount}
+          disabled={
+            waitForTransaction.isLoading ||
+            sendTransaction.isLoading ||
+            !sendTransaction.sendTransaction ||
+            !to ||
+            !amount
+          }
           mt={4}
           onClick={handleSendTransation}>
           {waitForTransaction.isLoading ? 'Sending...' : sendTransaction.isLoading ? 'Check your wallet' : 'Send'}
         </Button>
         {waitForTransaction.isSuccess && (
           <div>
-            <Text mt={2} fontSize="lg">
+            <Text mt={2} fontSize='lg'>
               Successfully sent {amount} ether to {to}
             </Text>
-            <Text fontSize="lg" fontWeight="bold">
-              <LinkComponent href={`${chain?.blockExplorers?.default.url}/tx/${sendTransaction.data?.hash}`}>Check on block explorer</LinkComponent>
+            <Text fontSize='lg' fontWeight='bold'>
+              <LinkComponent href={`${chain?.blockExplorers?.default.url}/tx/${sendTransaction.data?.hash}`}>
+                Check on block explorer
+              </LinkComponent>
             </Text>
           </div>
         )}
         {waitForTransaction.isError && (
           <div>
-            <Text mt={2} color="red" fontSize="lg">
-              Error sending {amount} ether to {to}
+            <Text mt={2} color='red' fontSize='lg'>
+              Error sending {amount} to {to}
             </Text>
-            <Text color="red" fontSize="lg" fontWeight="bold">
+            <Text color='red' fontSize='lg' fontWeight='bold'>
               {waitForTransaction.error?.message}
             </Text>
           </div>
@@ -87,19 +105,15 @@ export default function SendEtherExample() {
   if (isConnected) {
     return (
       <div>
-        <NextSeo title="Send Ether transaction" />
-        <Heading as="h2" fontSize="2xl" my={4}>
-          Send Ether transaction
+        <NextSeo title='Submit Quantum Circuit' />
+        <Heading as='h2' fontSize='2xl' my={4}>
+          Submit Quantum Circuit
         </Heading>
-        <p>
-          This example shows how to send an Ether transaction. You can use this to send Ether to another address, or to interact with a smart
-          contract.
-        </p>
 
         <SendEther />
       </div>
     )
   }
 
-  return <div>Connect your wallet first to sign a message.</div>
+  return <div>Connect your wallet to sign this transaction.</div>
 }
