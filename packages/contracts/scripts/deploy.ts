@@ -14,7 +14,7 @@ async function main() {
 
   const args: any[] = [routerAddress[networkName]]
   const QuantumOracle = await ethers.getContractFactory('QuantumOracle')
-  const quantumOracle = await QuantumOracle.deploy(...args)
+  const quantumOracle = await QuantumOracle.deploy(args[0])
 
   await quantumOracle.deployed()
 
