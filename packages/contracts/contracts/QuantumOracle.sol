@@ -4,7 +4,9 @@ pragma solidity ^0.8.20;
 import {FunctionsClient} from '@chainlink/contracts/src/v0.8/functions/dev/v1_0_0/FunctionsClient.sol';
 import {FunctionsRequest} from '@chainlink/contracts/src/v0.8/functions/dev/v1_0_0/libraries/FunctionsRequest.sol';
 
-contract QuantumOracle is FunctionsClient {
+import '@openzeppelin/contracts/access/Ownable.sol';
+
+contract QuantumOracle is FunctionsClient, Ownable {
   using FunctionsRequest for FunctionsRequest.Request;
 
   enum Status {
@@ -21,17 +23,30 @@ contract QuantumOracle is FunctionsClient {
     FETCH_RESULT
   }
 
+  mapping(bytes32 => string) public circuits;
   mapping(bytes32 => string) public results;
   mapping(bytes32 => string) public jobIds;
   mapping(bytes32 => RequestType) public requestTypes; // request id => request type
   mapping(bytes32 => bytes32) public requestIdToCircuitID; // request id => circuit hash
   mapping(bytes32 => Status) public status;
 
+  string public sourceForAddingCircuit;
+  string public sourceForFetchingResult;
+  uint8 public donHostedSecretsSlotID;
+  uint64 public donHostedSecretsVersion;
+  bytes32 public donId;
+  uint64 subscriptionId;
+  bytes encryptedSecretsUrls;
+  uint32 gasLimitForUpdatingJobID;
+  uint32 gasLimitForUpdatingResult;
+
   event CircuitAdded(string circuitQASM, bytes32 circuitHash);
   event CircuitJobSent(bytes32 circuitHash, string jobId);
   event CircuitResultAsked(bytes32 circuitHash, string jobId);
   event CircuitResultUpdated(bytes32 circuitHash, string jobId, string result);
   event ChainlinkResponse(bytes32 requestId, bytes response, bytes err);
+  event SourceUpdatedForAddingCircuit(string sourceForAddingCircuit);
+  event SourceUpdatedForFetchingResult(string sourceForFetchingResult);
 
   error InvalidValueSent();
   error CircuitAlreadyInSystem();
@@ -40,13 +55,53 @@ contract QuantumOracle is FunctionsClient {
 
   constructor(address chainlinkFunctionsRouter) FunctionsClient(chainlinkFunctionsRouter) {}
 
+  function updateSourceForAddingCircuit(string memory _sourceForAddingCircuit) public onlyOwner {
+    sourceForAddingCircuit = _sourceForAddingCircuit;
+    emit SourceUpdatedForAddingCircuit(sourceForAddingCircuit);
+  }
+
+  function updateSourceForFetchingResult(string memory _sourceForFetchingResult) public onlyOwner {
+    sourceForFetchingResult = _sourceForFetchingResult;
+    emit SourceUpdatedForFetchingResult(sourceForFetchingResult);
+  }
+
+  function setSubscriptionId(uint64 _subscriptionId) public onlyOwner {
+    subscriptionId = _subscriptionId;
+  }
+
+  function setDONConfig(
+    uint8 _donHostedSecretsSlotID,
+    uint64 _donHostedSecretsVersion,
+    bytes32 _donId
+  ) public onlyOwner {
+    donHostedSecretsSlotID = _donHostedSecretsSlotID;
+    donHostedSecretsVersion = _donHostedSecretsVersion;
+    donId = _donId;
+  }
+
+  function setEncryptedSecretUrls(bytes calldata _encryptedSecretsUrls) public onlyOwner {
+    encryptedSecretsUrls = _encryptedSecretsUrls;
+  }
+
+  function setGasLimitForUpdatingJobID(uint32 _gasLimit) public onlyOwner {
+    gasLimitForUpdatingJobID = _gasLimit;
+  }
+
+  function setGasLimitForUpdatingResult(uint32 _gasLimit) public onlyOwner {
+    gasLimitForUpdatingResult = _gasLimit;
+  }
+
   function addCircuit(string memory circuitQASM) public payable {
     bytes32 circuitHash = keccak256(abi.encode(circuitQASM));
     if (status[circuitHash] != Status.NON_EXISTENT) revert CircuitAlreadyInSystem();
     if (calculateCost(circuitQASM) != msg.value) revert InvalidValueSent();
 
-    // TODO: send the circuit to chainlink
+    // send the circuit to chainlink
+    string[1] memory args;
+    args[0] = circuitQASM;
+    sendRequest(sourceForAddingCircuit, args, gasLimitForUpdatingJobID);
 
+    circuits[circuitHash] = circuitQASM;
     status[circuitHash] = Status.PENDING;
 
     emit CircuitAdded(circuitQASM, circuitHash);
@@ -56,7 +111,12 @@ contract QuantumOracle is FunctionsClient {
     if (status[circuitHash] != Status.REQUESTED) revert InvalidStatusForThisCall();
 
     string memory jobId = jobIds[circuitHash];
-    // TODO: send the result request to chainlink
+    string memory circuitQASM = circuits[circuitHash];
+    // send the result request to chainlink
+    string[2] memory args;
+    args[0] = circuitQASM;
+    args[1] = jobId;
+    sendRequest(sourceForFetchingResult, args, gasLimitForUpdatingResult);
 
     status[circuitHash] = Status.RESULT_PENDING;
     emit CircuitResultAsked(circuitHash, jobId);
@@ -84,15 +144,10 @@ contract QuantumOracle is FunctionsClient {
 
   function sendRequest(
     string memory source,
-    bytes memory encryptedSecretsUrls,
-    uint8 donHostedSecretsSlotID,
-    uint64 donHostedSecretsVersion,
     string[] memory args,
-    bytes[] memory bytesArgs,
-    uint64 subscriptionId,
-    uint32 gasLimit,
-    bytes32 jobId
-  ) external returns (bytes32 requestId) {
+    // bytes[] memory bytesArgs,
+    uint32 gasLimit
+  ) internal returns (bytes32 requestId) {
     FunctionsRequest.Request memory req;
     req.initializeRequestForInlineJavaScript(source);
     if (encryptedSecretsUrls.length > 0) req.addSecretsReference(encryptedSecretsUrls);
@@ -100,10 +155,8 @@ contract QuantumOracle is FunctionsClient {
       req.addDONHostedSecrets(donHostedSecretsSlotID, donHostedSecretsVersion);
     }
     if (args.length > 0) req.setArgs(args);
-    if (bytesArgs.length > 0) req.setBytesArgs(bytesArgs);
-    // s_lastRequestId =
-    // return s_lastRequestId;
-    return _sendRequest(req.encodeCBOR(), subscriptionId, gasLimit, jobId);
+    // if (bytesArgs.length > 0) req.setBytesArgs(bytesArgs);
+    requestId = _sendRequest(req.encodeCBOR(), subscriptionId, gasLimit, donId);
   }
 
   function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
