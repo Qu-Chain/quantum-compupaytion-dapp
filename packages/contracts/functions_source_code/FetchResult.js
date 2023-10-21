@@ -1,6 +1,6 @@
 const circuit = args[0]
 
-const url = `https://fastapi-production-b856.up.railway.app/${jobId}`
+const url = `https://fastapi-production-b856.up.railway.app/result/${jobId}`
 
 const result = Functions.makeHttpRequest({
   url: url,
