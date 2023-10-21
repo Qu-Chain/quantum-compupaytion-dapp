@@ -7,7 +7,6 @@ export default function Home() {
   return (
     <>
       <Head />
-
       <main>
         <Heading as="h2">Upload your Quantum Circuit</Heading>
         <Upload />
