@@ -1,7 +1,8 @@
-import { ReactNode, useRef, ChangeEvent, useState } from 'react'
+import React, { createContext, useContext, ReactNode, useRef, ChangeEvent, useState } from 'react'
 import { Button, FormControl, FormErrorMessage, FormLabel, Icon, InputGroup } from '@chakra-ui/react'
 import { useForm, UseFormRegisterReturn } from 'react-hook-form'
 import { FiFile } from 'react-icons/fi'
+import { useCircuitContext } from 'components/layout/CircuitContext'
 
 type FileUploadProps = {
   register: UseFormRegisterReturn
@@ -65,14 +66,17 @@ export function Upload() {
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>()
-  const [fileContents, setFileContents] = useState('')
+  const [CircuitString, setCircuitString] = useState('')
+  const { circuit, setCircuit } = useCircuitContext()
   const [title, setTitle] = useState('')
 
   const onSubmit = handleSubmit((data) => {
-    const selectedFile = readFileAsText(data.file_[0])
+    if (!data.file_ || data.file_.length < 1) return
+    const selectedFile = readFileAsText(data.file_[0] as File)
       .then((fileContents) => {
         console.log(fileContents)
-        setFileContents(fileContents)
+        setCircuitString(fileContents)
+        setCircuit(fileContents)
         setTitle('Your Circuit')
       })
       .catch((error) => {
@@ -114,12 +118,15 @@ export function Upload() {
       </form>
       <div>
         <h2>{title}</h2>
-        <p>{fileContents}</p>
+        <p>
+          {CircuitString.split('\n').map((el) => (
+            <React.Fragment key={el}>
+              {el}
+              <br />
+            </React.Fragment>
+          ))}
+        </p>
       </div>
     </>
   )
-}
-
-export function getCircuitString(useState: any, fileContents: string) {
-  return fileContents
 }

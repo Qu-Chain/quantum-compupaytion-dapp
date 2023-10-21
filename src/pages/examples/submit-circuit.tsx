@@ -2,21 +2,27 @@ import { useDebounce } from 'use-debounce'
 import {
   useAccount,
   useBalance,
-  usePrepareSendTransaction,
-  useSendTransaction,
+  useContractWrite,
+  usePrepareContractWrite,
   useWaitForTransaction,
   useNetwork,
 } from 'wagmi'
 import { Button, FormControl, FormLabel, Heading, Input, NumberInput, NumberInputField, Text } from '@chakra-ui/react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { NextSeo } from 'next-seo'
 import { utils } from 'ethers'
 import { LinkComponent } from 'components/layout/LinkComponent'
+import { useCircuitContext } from 'components/layout/CircuitContext'
 
 function SendEther() {
-  const [to, setTo] = useState('')
-  const [debouncedTo] = useDebounce(to, 500)
+  const { circuit, setCircuit } = useCircuitContext()
 
+  const updateStateIfCircuitNotEmpty = () => {
+    if (circuit !== '') {
+      const length: number = circuit.length * 10 ** 10
+      setAmount(utils.formatEther(length.toString()))
+    }
+  }
   const [amount, setAmount] = useState('')
   const [debouncedAmount] = useDebounce(amount, 500)
 
@@ -26,59 +32,63 @@ function SendEther() {
     address,
   })
 
-  const prepareSendTransaction = usePrepareSendTransaction({
-    request: {
-      to: debouncedTo,
-      value: debouncedAmount ? utils.parseEther(debouncedAmount) : undefined,
-    },
+  const prepareContractWrite = usePrepareContractWrite({
+    address: '',
+    abi: [
+      {
+        name: 'QuantumOracle',
+        type: 'function',
+        stateMutability: 'payable',
+        inputs: [circuit, utils.parseEther(amount)],
+        outputs: [],
+      },
+    ],
+    functionName: 'addCircuit',
   })
-  const sendTransaction = useSendTransaction(prepareSendTransaction.config)
+
+  const contractWrite = useContractWrite(prepareContractWrite.config)
   const waitForTransaction = useWaitForTransaction({
-    hash: sendTransaction.data?.hash,
+    hash: contractWrite.data?.hash,
     onSettled: () => balance.refetch(),
   })
 
   const handleSendTransation = () => {
-    sendTransaction.sendTransaction?.()
+    contractWrite.write?.()
   }
 
   return (
     <div>
       <Heading as='h3' fontSize='xl' my={4}>
-        Submit Quantum Circuit
+        Your Circuit
       </Heading>
+      <p>
+        {circuit.split('\n').map((el) => (
+          <React.Fragment key={el}>
+            {el}
+            <br />
+          </React.Fragment>
+        ))}
+      </p>
+      <Button onClick={updateStateIfCircuitNotEmpty}>Calculate Approximate of Computation</Button>
 
       <FormControl>
-        <FormLabel>Recipient</FormLabel>
-        <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder='0xA0Cf…251e' />
-
-        <FormLabel mt={2}>Amount</FormLabel>
+        <FormLabel mt={2}>Cost of Computation</FormLabel>
         <NumberInput mb={2} value={amount} onChange={(value) => setAmount(value)}>
-          <NumberInputField placeholder='0.05' />
+          <NumberInputField placeholder='0.0' />
         </NumberInput>
         <Text>
           Your balance: {balance.data?.formatted} {balance.data?.symbol}
         </Text>
-
-        <Button
-          disabled={
-            waitForTransaction.isLoading ||
-            sendTransaction.isLoading ||
-            !sendTransaction.sendTransaction ||
-            !to ||
-            !amount
-          }
-          mt={4}
-          onClick={handleSendTransation}>
-          {waitForTransaction.isLoading ? 'Sending...' : sendTransaction.isLoading ? 'Check your wallet' : 'Send'}
+        <Button width='full' mt={4} onClick={handleSendTransation}>
+          Send Transaction
         </Button>
         {waitForTransaction.isSuccess && (
           <div>
             <Text mt={2} fontSize='lg'>
-              Successfully sent {amount} ether to {to}
+              Successfully Called QuantumOrcale
             </Text>
             <Text fontSize='lg' fontWeight='bold'>
-              <LinkComponent href={`${chain?.blockExplorers?.default.url}/tx/${sendTransaction.data?.hash}`}>
+              <LinkComponent href={`${chain?.blockExplorers?.default.url}/tx/${contractWrite.data?.hash}`}>
                 Check on block explorer
               </LinkComponent>
             </Text>
@@ -87,7 +97,7 @@ function SendEther() {
         {waitForTransaction.isError && (
           <div>
             <Text mt={2} color='red' fontSize='lg'>
-              Error sending {amount} to {to}
+              Error Calling QuantumOracle
             </Text>
             <Text color='red' fontSize='lg' fontWeight='bold'>
               {waitForTransaction.error?.message}
@@ -115,5 +125,5 @@ export default function SendEtherExample() {
     )
   }
 
-  return <div>Connect your wallet to sign this transaction.</div>
+  return <div>Connect your wallet to submit your circuit to the blockchain.</div>
 }
