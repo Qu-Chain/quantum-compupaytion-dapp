@@ -1,112 +1,128 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.20;
 
-import {FunctionsClient} from "@chainlink/contracts/src/v0.8/functions/dev/v1_0_0/FunctionsClient.sol";
-import {ConfirmedOwner} from "@chainlink/contracts/src/v0.8/shared/access/ConfirmedOwner.sol";
-import {FunctionsRequest} from "@chainlink/contracts/src/v0.8/functions/dev/v1_0_0/libraries/FunctionsRequest.sol";
+import {FunctionsClient} from '@chainlink/contracts/src/v0.8/functions/dev/v1_0_0/FunctionsClient.sol';
+import {FunctionsRequest} from '@chainlink/contracts/src/v0.8/functions/dev/v1_0_0/libraries/FunctionsRequest.sol';
 
-/**
- * THIS IS AN EXAMPLE CONTRACT THAT USES HARDCODED VALUES FOR CLARITY.
- * THIS IS AN EXAMPLE CONTRACT THAT USES UN-AUDITED CODE.
- * DO NOT USE THIS CODE IN PRODUCTION.
- */
-contract QuantumOracle is FunctionsClient, ConfirmedOwner {
-    using FunctionsRequest for FunctionsRequest.Request;
+contract QuantumOracle is FunctionsClient {
+  using FunctionsRequest for FunctionsRequest.Request;
 
-    bytes32 public s_lastRequestId;
-    bytes public s_lastResponse;
-    bytes public s_lastError;
+  enum Status {
+    NON_EXISTENT,
+    PENDING,
+    REQUESTED,
+    RESULT_PENDING,
+    RESULT_UPDATED
+  }
 
-    error UnexpectedRequestID(bytes32 requestId);
+  enum RequestType {
+    NON_EXISTENT,
+    CREATE_CIRCUIT,
+    FETCH_RESULT
+  }
 
-    event Response(bytes32 indexed requestId, bytes response, bytes err);
+  mapping(bytes32 => string) public results;
+  mapping(bytes32 => string) public jobIds;
+  mapping(bytes32 => RequestType) public requestTypes; // request id => request type
+  mapping(bytes32 => bytes32) public requestIdToCircuitID; // request id => circuit hash
+  mapping(bytes32 => Status) public status;
 
-    constructor(
-        address router
-    ) FunctionsClient(router) ConfirmedOwner(msg.sender) {}
+  event CircuitAdded(string circuitQASM, bytes32 circuitHash);
+  event CircuitJobSent(bytes32 circuitHash, string jobId);
+  event CircuitResultAsked(bytes32 circuitHash, string jobId);
+  event CircuitResultUpdated(bytes32 circuitHash, string jobId, string result);
+  event ChainlinkResponse(bytes32 requestId, bytes response, bytes err);
 
-    /**
-     * @notice Send a simple request
-     * @param source JavaScript source code
-     * @param encryptedSecretsUrls Encrypted URLs where to fetch user secrets
-     * @param donHostedSecretsSlotID Don hosted secrets slotId
-     * @param donHostedSecretsVersion Don hosted secrets version
-     * @param args List of arguments accessible from within the source code
-     * @param bytesArgs Array of bytes arguments, represented as hex strings
-     * @param subscriptionId Billing ID
-     */
-    function sendRequest(
-        string memory source,
-        bytes memory encryptedSecretsUrls,
-        uint8 donHostedSecretsSlotID,
-        uint64 donHostedSecretsVersion,
-        string[] memory args,
-        bytes[] memory bytesArgs,
-        uint64 subscriptionId,
-        uint32 gasLimit,
-        bytes32 jobId
-    ) external onlyOwner returns (bytes32 requestId) {
-        FunctionsRequest.Request memory req;
-        req.initializeRequestForInlineJavaScript(source);
-        if (encryptedSecretsUrls.length > 0)
-            req.addSecretsReference(encryptedSecretsUrls);
-        else if (donHostedSecretsVersion > 0) {
-            req.addDONHostedSecrets(
-                donHostedSecretsSlotID,
-                donHostedSecretsVersion
-            );
-        }
-        if (args.length > 0) req.setArgs(args);
-        if (bytesArgs.length > 0) req.setBytesArgs(bytesArgs);
-        s_lastRequestId = _sendRequest(
-            req.encodeCBOR(),
-            subscriptionId,
-            gasLimit,
-            jobId
-        );
-        return s_lastRequestId;
+  error InvalidValueSent();
+  error CircuitAlreadyInSystem();
+  error InvalidStatusForThisCall();
+  error InvalidRequestId();
+
+  constructor(address chainlinkFunctionsRouter) FunctionsClient(chainlinkFunctionsRouter) {}
+
+  function addCircuit(string memory circuitQASM) public payable {
+    bytes32 circuitHash = keccak256(abi.encode(circuitQASM));
+    if (status[circuitHash] != Status.NON_EXISTENT) revert CircuitAlreadyInSystem();
+    if (calculateCost(circuitQASM) != msg.value) revert InvalidValueSent();
+
+    // TODO: send the circuit to chainlink
+
+    status[circuitHash] = Status.PENDING;
+
+    emit CircuitAdded(circuitQASM, circuitHash);
+  }
+
+  function fetchResult(bytes32 circuitHash) public {
+    if (status[circuitHash] != Status.REQUESTED) revert InvalidStatusForThisCall();
+
+    string memory jobId = jobIds[circuitHash];
+    // TODO: send the result request to chainlink
+
+    status[circuitHash] = Status.RESULT_PENDING;
+    emit CircuitResultAsked(circuitHash, jobId);
+  }
+
+  function updateResult(bytes32 circuitHash, string memory result) internal {
+    if (status[circuitHash] != Status.RESULT_PENDING) revert InvalidStatusForThisCall();
+
+    string memory jobId = jobIds[circuitHash];
+    results[circuitHash] = result;
+    status[circuitHash] = Status.RESULT_UPDATED;
+    emit CircuitResultUpdated(circuitHash, jobId, result);
+  }
+
+  function updateJobId(bytes32 circuitHash, string memory jobId) internal {
+    if (status[circuitHash] != Status.PENDING) revert InvalidStatusForThisCall();
+
+    status[circuitHash] = Status.REQUESTED;
+    emit CircuitJobSent(circuitHash, jobId);
+  }
+
+  function calculateCost(string memory circuitQASM) public pure returns (uint256) {
+    return bytes(circuitQASM).length * 1e10;
+  }
+
+  function sendRequest(
+    string memory source,
+    bytes memory encryptedSecretsUrls,
+    uint8 donHostedSecretsSlotID,
+    uint64 donHostedSecretsVersion,
+    string[] memory args,
+    bytes[] memory bytesArgs,
+    uint64 subscriptionId,
+    uint32 gasLimit,
+    bytes32 jobId
+  ) external returns (bytes32 requestId) {
+    FunctionsRequest.Request memory req;
+    req.initializeRequestForInlineJavaScript(source);
+    if (encryptedSecretsUrls.length > 0) req.addSecretsReference(encryptedSecretsUrls);
+    else if (donHostedSecretsVersion > 0) {
+      req.addDONHostedSecrets(donHostedSecretsSlotID, donHostedSecretsVersion);
+    }
+    if (args.length > 0) req.setArgs(args);
+    if (bytesArgs.length > 0) req.setBytesArgs(bytesArgs);
+    // s_lastRequestId =
+    // return s_lastRequestId;
+    return _sendRequest(req.encodeCBOR(), subscriptionId, gasLimit, jobId);
+  }
+
+  function fulfillRequest(bytes32 requestId, bytes memory response, bytes memory err) internal override {
+    if (requestTypes[requestId] == RequestType.NON_EXISTENT) {
+      revert InvalidRequestId();
     }
 
-    /**
-     * @notice Send a pre-encoded CBOR request
-     * @param request CBOR-encoded request data
-     * @param subscriptionId Billing ID
-     * @param gasLimit The maximum amount of gas the request can consume
-     * @param jobId ID of the job to be invoked
-     * @return requestId The ID of the sent request
-     */
-    function sendRequestCBOR(
-        bytes memory request,
-        uint64 subscriptionId,
-        uint32 gasLimit,
-        bytes32 jobId
-    ) external onlyOwner returns (bytes32 requestId) {
-        s_lastRequestId = _sendRequest(
-            request,
-            subscriptionId,
-            gasLimit,
-            jobId
-        );
-        return s_lastRequestId;
+    bytes32 circuitHash = requestIdToCircuitID[requestId];
+
+    // TODO: handle error
+
+    if (requestTypes[requestId] == RequestType.CREATE_CIRCUIT) {
+      string memory jobId = abi.decode(response, (string));
+      updateJobId(circuitHash, jobId);
+    } else if (requestTypes[requestId] == RequestType.FETCH_RESULT) {
+      string memory result = abi.decode(response, (string));
+      updateResult(circuitHash, result);
     }
 
-    /**
-     * @notice Store latest result/error
-     * @param requestId The request ID, returned by sendRequest()
-     * @param response Aggregated response from the user code
-     * @param err Aggregated error from the user code or from the execution pipeline
-     * Either response or error parameter will be set, but never both
-     */
-    function fulfillRequest(
-        bytes32 requestId,
-        bytes memory response,
-        bytes memory err
-    ) internal override {
-        if (s_lastRequestId != requestId) {
-            revert UnexpectedRequestID(requestId);
-        }
-        s_lastResponse = response;
-        s_lastError = err;
-        emit Response(requestId, s_lastResponse, s_lastError);
-    }
+    emit ChainlinkResponse(requestId, response, err);
+  }
 }
