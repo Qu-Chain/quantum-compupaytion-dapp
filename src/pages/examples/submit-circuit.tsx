@@ -8,10 +8,11 @@ import {
   useNetwork,
 } from 'wagmi'
 import { Button, FormControl, FormLabel, Heading, Input, NumberInput, NumberInputField, Text } from '@chakra-ui/react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { NextSeo } from 'next-seo'
 import { utils } from 'ethers'
 import { LinkComponent } from 'components/layout/LinkComponent'
+import { useCircuitContext } from 'components/layout/CircuitContext'
 
 function SendEther() {
   const [to, setTo] = useState('')
@@ -42,19 +43,34 @@ function SendEther() {
     sendTransaction.sendTransaction?.()
   }
 
+  const { circuit, setCircuit } = useCircuitContext()
+
+  const updateStateIfCircuitNotEmpty = () => {
+    if (circuit !== '') {
+      const length: number = circuit.length * 10 ** 10
+      setAmount(length.toString())
+    }
+  }
+
   return (
     <div>
       <Heading as='h3' fontSize='xl' my={4}>
-        Submit Quantum Circuit
+        Your Circuit
       </Heading>
+      <Button onClick={updateStateIfCircuitNotEmpty}>Calculate Approximate of Computation</Button>
+      <p>
+        {circuit.split('\n').map((el) => (
+          <React.Fragment key={el}>
+            {el}
+            <br />
+          </React.Fragment>
+        ))}
+      </p>
 
       <FormControl>
-        <FormLabel>Recipient</FormLabel>
-        <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder='0xA0Cf…251e' />
-
-        <FormLabel mt={2}>Amount</FormLabel>
+        <FormLabel mt={2}>Cost of Computation</FormLabel>
         <NumberInput mb={2} value={amount} onChange={(value) => setAmount(value)}>
-          <NumberInputField placeholder='0.05' />
+          <NumberInputField placeholder='0.0' />
         </NumberInput>
         <Text>
           Your balance: {balance.data?.formatted} {balance.data?.symbol}
