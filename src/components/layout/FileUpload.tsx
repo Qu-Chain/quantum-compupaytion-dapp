@@ -9,6 +9,28 @@ type FileUploadProps = {
   children?: ReactNode
 }
 
+function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      reject(new Error('No file provided'))
+      return
+    }
+
+    const reader = new FileReader()
+
+    reader.addEventListener('load', () => {
+      const fileContents = reader.result as string
+      resolve(fileContents)
+    })
+
+    reader.addEventListener('error', () => {
+      reject(new Error('Error reading the file'))
+    })
+
+    reader.readAsText(file)
+  })
+}
+
 const FileUpload = (props: FileUploadProps) => {
   const { register, accept, children } = props
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -43,17 +65,25 @@ export function Upload() {
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>()
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [fileContents, setFileContents] = useState('')
+  const [title, setTitle] = useState('')
 
   const onSubmit = handleSubmit((data) => {
-    const selectedFile = data.file_[0]
+    const selectedFile = readFileAsText(data.file_[0])
+      .then((fileContents) => {
+        console.log(fileContents)
+        setFileContents(fileContents)
+        setTitle('Your Circuit')
+      })
+      .catch((error) => {
+        console.error(error)
+      })
     console.log('On Submit: ', data)
     console.log('Selected file: ', selectedFile)
 
     // set the selected file to a local state variable here.
-    setSelectedFile(selectedFile)
+   
   })
-
 
   const validateFiles = (value: File) => {
     if (value.length < 1) {
@@ -81,8 +111,13 @@ export function Upload() {
 
           <FormErrorMessage>{errors.file_ && errors?.file_.message}</FormErrorMessage>
         </FormControl>
-        <button>Submit</button>
+        <button>Upload Circuit</button>
       </form>
+      <div>
+        <h2>{title}</h2>
+        <p>{fileContents}</p>
+      </div>
+
     </>
   )
 }

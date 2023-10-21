@@ -8,9 +8,9 @@ export default function Home() {
     <>
       <Head />
       <main>
-        <Heading as="h2">Upload your Quantum Circuit</Heading>
+        <Heading as='h2'>Upload your Quantum Circuit</Heading>
         <Upload />
-        <LinkComponent href="/examples/send-ether">Send Ether transaction</LinkComponent>
+        <LinkComponent href='/examples/submit-circuit'>Submit Quantum Circuit</LinkComponent>
       </main>
     </>
   )
