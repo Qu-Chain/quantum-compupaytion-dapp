@@ -82,7 +82,6 @@ export function Upload() {
     console.log('Selected file: ', selectedFile)
 
     // set the selected file to a local state variable here.
-   
   })
 
   const validateFiles = (value: File) => {
@@ -117,7 +116,10 @@ export function Upload() {
         <h2>{title}</h2>
         <p>{fileContents}</p>
       </div>
-
     </>
   )
+}
+
+export function getCircuitString(useState: any, fileContents: string) {
+  return fileContents
 }
