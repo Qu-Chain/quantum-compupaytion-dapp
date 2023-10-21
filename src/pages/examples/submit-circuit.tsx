@@ -2,8 +2,8 @@ import { useDebounce } from 'use-debounce'
 import {
   useAccount,
   useBalance,
-  usePrepareSendTransaction,
-  useSendTransaction,
+  useContractWrite,
+  usePrepareContractWrite,
   useWaitForTransaction,
   useNetwork,
 } from 'wagmi'
@@ -15,9 +15,14 @@ import { LinkComponent } from 'components/layout/LinkComponent'
 import { useCircuitContext } from 'components/layout/CircuitContext'
 
 function SendEther() {
-  const [to, setTo] = useState('')
-  const [debouncedTo] = useDebounce(to, 500)
+  const { circuit, setCircuit } = useCircuitContext()
 
+  const updateStateIfCircuitNotEmpty = () => {
+    if (circuit !== '') {
+      const length: number = circuit.length * 10 ** 10
+      setAmount(utils.formatEther(length.toString()))
+    }
+  }
   const [amount, setAmount] = useState('')
   const [debouncedAmount] = useDebounce(amount, 500)
 
@@ -27,29 +32,28 @@ function SendEther() {
     address,
   })
 
-  const prepareSendTransaction = usePrepareSendTransaction({
-    request: {
-      to: debouncedTo,
-      value: debouncedAmount ? utils.parseEther(debouncedAmount) : undefined,
-    },
+  const prepareContractWrite = usePrepareContractWrite({
+    address: '',
+    abi: [
+      {
+        name: 'QuantumOracle',
+        type: 'function',
+        stateMutability: 'payable',
+        inputs: [circuit, utils.parseEther(amount)],
+        outputs: [],
+      },
+    ],
+    functionName: 'addCircuit',
   })
-  const sendTransaction = useSendTransaction(prepareSendTransaction.config)
+
+  const contractWrite = useContractWrite(prepareContractWrite.config)
   const waitForTransaction = useWaitForTransaction({
-    hash: sendTransaction.data?.hash,
+    hash: contractWrite.data?.hash,
     onSettled: () => balance.refetch(),
   })
 
   const handleSendTransation = () => {
-    sendTransaction.sendTransaction?.()
-  }
-
-  const { circuit, setCircuit } = useCircuitContext()
-
-  const updateStateIfCircuitNotEmpty = () => {
-    if (circuit !== '') {
-      const length: number = circuit.length * 10 ** 10
-      setAmount(length.toString())
-    }
+    contractWrite.write?.()
   }
 
   return (
@@ -57,7 +61,6 @@ function SendEther() {
       <Heading as='h3' fontSize='xl' my={4}>
         Your Circuit
       </Heading>
-      <Button onClick={updateStateIfCircuitNotEmpty}>Calculate Approximate of Computation</Button>
       <p>
         {circuit.split('\n').map((el) => (
           <React.Fragment key={el}>
@@ -66,6 +69,7 @@ function SendEther() {
           </React.Fragment>
         ))}
       </p>
+      <Button onClick={updateStateIfCircuitNotEmpty}>Calculate Approximate of Computation</Button>
 
       <FormControl>
         <FormLabel mt={2}>Cost of Computation</FormLabel>
@@ -75,26 +79,16 @@ function SendEther() {
         <Text>
           Your balance: {balance.data?.formatted} {balance.data?.symbol}
         </Text>
-
-        <Button
-          disabled={
-            waitForTransaction.isLoading ||
-            sendTransaction.isLoading ||
-            !sendTransaction.sendTransaction ||
-            !to ||
-            !amount
-          }
-          mt={4}
-          onClick={handleSendTransation}>
-          {waitForTransaction.isLoading ? 'Sending...' : sendTransaction.isLoading ? 'Check your wallet' : 'Send'}
+        <Button width='full' mt={4} onClick={handleSendTransation}>
+          Send Transaction
         </Button>
         {waitForTransaction.isSuccess && (
           <div>
             <Text mt={2} fontSize='lg'>
-              Successfully sent {amount} ether to {to}
+              Successfully Called QuantumOrcale
             </Text>
             <Text fontSize='lg' fontWeight='bold'>
-              <LinkComponent href={`${chain?.blockExplorers?.default.url}/tx/${sendTransaction.data?.hash}`}>
+              <LinkComponent href={`${chain?.blockExplorers?.default.url}/tx/${contractWrite.data?.hash}`}>
                 Check on block explorer
               </LinkComponent>
             </Text>
@@ -103,7 +97,7 @@ function SendEther() {
         {waitForTransaction.isError && (
           <div>
             <Text mt={2} color='red' fontSize='lg'>
-              Error sending {amount} to {to}
+              Error Calling QuantumOracle
             </Text>
             <Text color='red' fontSize='lg' fontWeight='bold'>
               {waitForTransaction.error?.message}
@@ -131,5 +125,5 @@ export default function SendEtherExample() {
     )
   }
 
-  return <div>Connect your wallet to sign this transaction.</div>
+  return <div>Connect your wallet to submit your circuit to the blockchain.</div>
 }
