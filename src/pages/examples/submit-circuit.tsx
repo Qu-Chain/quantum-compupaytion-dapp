@@ -13,6 +13,8 @@ import { NextSeo } from 'next-seo'
 import { utils } from 'ethers'
 import { LinkComponent } from 'components/layout/LinkComponent'
 import { useCircuitContext } from 'components/layout/CircuitContext'
+import { parseEther } from 'ethers/lib/utils.js'
+import abi_contract from '../../../src/abi/QuantumOracle.json'
 
 function SendEther() {
   const { circuit, setCircuit } = useCircuitContext()
@@ -21,9 +23,11 @@ function SendEther() {
     if (circuit !== '') {
       const length: number = circuit.length * 10 ** 10
       setAmount(utils.formatEther(length.toString()))
+      setValue(length.toString())
     }
   }
   const [amount, setAmount] = useState('')
+  const [_value, setValue] = useState('')
   const [debouncedAmount] = useDebounce(amount, 500)
 
   const { chain } = useNetwork()
@@ -32,18 +36,14 @@ function SendEther() {
     address,
   })
 
+  console.log('amount', amount)
+
   const prepareContractWrite = usePrepareContractWrite({
-    address: '',
-    abi: [
-      {
-        name: 'QuantumOracle',
-        type: 'function',
-        stateMutability: 'payable',
-        inputs: [circuit, utils.parseEther(amount)],
-        outputs: [],
-      },
-    ],
+    address: '0xbD1deBcB2E5D80187a149fB52368aa4229eaAD09',
+    abi: abi_contract,
+    args: [circuit],
     functionName: 'addCircuit',
+    value: _value,
   })
 
   const contractWrite = useContractWrite(prepareContractWrite.config)
@@ -69,7 +69,7 @@ function SendEther() {
           </React.Fragment>
         ))}
       </p>
-      <Button onClick={updateStateIfCircuitNotEmpty}>Calculate Approximate of Computation</Button>
+      <Button onClick={updateStateIfCircuitNotEmpty}>Calculate Approximate Cost of Computation</Button>
 
       <FormControl>
         <FormLabel mt={2}>Cost of Computation</FormLabel>

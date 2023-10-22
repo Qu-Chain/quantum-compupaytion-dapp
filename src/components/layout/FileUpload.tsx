@@ -3,6 +3,7 @@ import { Button, FormControl, FormErrorMessage, FormLabel, Icon, InputGroup } fr
 import { useForm, UseFormRegisterReturn } from 'react-hook-form'
 import { FiFile } from 'react-icons/fi'
 import { useCircuitContext } from 'components/layout/CircuitContext'
+import { fetchQiskitDataFromApi } from 'pages/api/qiskitAPI'
 
 type FileUploadProps = {
   register: UseFormRegisterReturn
@@ -68,6 +69,7 @@ export function Upload() {
   } = useForm<FormValues>()
   const [CircuitString, setCircuitString] = useState('')
   const { circuit, setCircuit } = useCircuitContext()
+  const [imgURL, setImg] = useState('')
   const [title, setTitle] = useState('')
 
   const onSubmit = handleSubmit((data) => {
@@ -78,6 +80,20 @@ export function Upload() {
         setCircuitString(fileContents)
         setCircuit(fileContents)
         setTitle('Your Circuit')
+        const imgPromise = fetchQiskitDataFromApi(fileContents)
+        imgPromise
+          .then((resolvedValue) => {
+            // Do something with the resolved value
+            const imageBlob = resolvedValue
+            const blob = new Blob(imageBlob, { type: 'image/png' }) // the blob
+            const imageObjectURL = URL.createObjectURL(blob)
+            console.log(imageObjectURL)
+            setImg(imageObjectURL)
+          })
+          .catch((error) => {
+            // Handle any errors that occurred during the promise execution
+            console.log(error)
+          })
       })
       .catch((error) => {
         console.error(error)
@@ -126,7 +142,12 @@ export function Upload() {
             </React.Fragment>
           ))}
         </p>
+        <div>
+          {imgURL && <img src={imgURL} />}
+          {!imgURL && <p>Loading...</p>}
+        </div>
       </div>
+      <div>{}</div>
     </>
   )
 }

@@ -1,5 +1,5 @@
 import { ThemingProps } from '@chakra-ui/react'
-import { mainnet, goerli, sepolia, polygon, optimism, arbitrum } from '@wagmi/chains'
+import { mainnet, goerli, sepolia, polygon, optimism, arbitrum, polygonMumbai } from '@wagmi/chains'
 
 export const SITE_NAME = 'Quantum Compupaytion'
 export const SITE_DESCRIPTION = 'Pay for your computation in crypto, results posted on chain'
@@ -14,7 +14,7 @@ export const THEME_CONFIG = {
   initialColorMode: THEME_INITIAL_COLOR,
 }
 
-export const ETH_CHAINS = [mainnet, goerli, sepolia, polygon, optimism, arbitrum]
+export const ETH_CHAINS = [polygonMumbai]
 
 export const SERVER_SESSION_SETTINGS = {
   cookieName: SITE_NAME,
