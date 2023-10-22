@@ -34,9 +34,9 @@ yarn dev
 The smart contract is live on PolygonMumbai: https://mumbai.polygonscan.com/address/0xbD1deBcB2E5D80187a149fB52368aa4229eaAD09.
 
 Chainlink Functions:
-https://github.com/Qu-Chain/quantum-compupaytion-dapp/blob/main/packages/contracts/contracts/QuantumOracle.sol
-https://github.com/Qu-Chain/quantum-compupaytion-dapp/tree/main/packages/contracts/functions_source_code
-https://github.com/Qu-Chain/quantum-compupaytion-dapp/blob/main/packages/contracts/scripts/deploy.ts
+- https://github.com/Qu-Chain/quantum-compupaytion-dapp/blob/main/packages/contracts/contracts/QuantumOracle.sol
+- https://github.com/Qu-Chain/quantum-compupaytion-dapp/tree/main/packages/contracts/functions_source_code
+- https://github.com/Qu-Chain/quantum-compupaytion-dapp/blob/main/packages/contracts/scripts/deploy.ts
 
 Chainlink Automation:
-https://automation.chain.link/mumbai/1509120381179837733293241577978834436454292072247307933609402250293705981564
+- https://automation.chain.link/mumbai/1509120381179837733293241577978834436454292072247307933609402250293705981564
