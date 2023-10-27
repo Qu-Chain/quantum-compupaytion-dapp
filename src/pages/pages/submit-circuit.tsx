@@ -13,8 +13,7 @@ import { NextSeo } from 'next-seo'
 import { utils } from 'ethers'
 import { LinkComponent } from 'components/layout/LinkComponent'
 import { useCircuitContext } from 'components/layout/CircuitContext'
-import { parseEther } from 'ethers/lib/utils.js'
-import abi_contract from '../../../src/abi/QuantumOracle.json'
+import abi_contract from '../../abi/QuantumOracle.json'
 
 function SendEther() {
   const { circuit, setCircuit } = useCircuitContext()
@@ -28,7 +27,6 @@ function SendEther() {
   }
   const [amount, setAmount] = useState('')
   const [_value, setValue] = useState('')
-  const [debouncedAmount] = useDebounce(amount, 500)
 
   const { chain } = useNetwork()
   const { address } = useAccount()

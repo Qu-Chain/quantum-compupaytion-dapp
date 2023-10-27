@@ -5,8 +5,8 @@ export const SITE_NAME = 'Quantum Compupaytion'
 export const SITE_DESCRIPTION = 'Pay for your computation in crypto, results posted on chain'
 export const SITE_URL = 'https://nexth.vercel.app'
 
-export const SOCIAL_TWITTER = 'wslyvh'
-export const SOCIAL_GITHUB = 'jan-o-e/quantum-compupaytion'
+export const SOCIAL_TWITTER = 'HomeDAO_live/status/1717530622292308376?s=20'
+export const SOCIAL_GITHUB = 'Qu-Chain/quantum-compupaytion-dapp'
 
 export const THEME_INITIAL_COLOR = 'system'
 export const THEME_COLOR_SCHEME: ThemingProps['colorScheme'] = 'gray'
@@ -15,11 +15,3 @@ export const THEME_CONFIG = {
 }
 
 export const ETH_CHAINS = [polygonMumbai]
-
-export const SERVER_SESSION_SETTINGS = {
-  cookieName: SITE_NAME,
-  password: process.env.SESSION_PASSWORD ?? 'UPDATE_TO_complex_password_at_least_32_characters_long',
-  cookieOptions: {
-    secure: process.env.NODE_ENV === 'production',
-  },
-}

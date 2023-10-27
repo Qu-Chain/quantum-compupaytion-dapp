@@ -1,8 +1,8 @@
 import axios, { AxiosResponse } from 'axios'
 
-// Define an interface for the response data (adjust this to match your API response structure)
+// Define an interface for the response data
 interface ApiResponse {
-  data: any // Change 'any' to the actual data structure expected from the API
+  data: any
 }
 
 // Define an async function to fetch data from the API

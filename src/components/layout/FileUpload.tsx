@@ -11,6 +11,7 @@ type FileUploadProps = {
   children?: ReactNode
 }
 
+// Function to read a file as text
 function readFileAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -33,6 +34,7 @@ function readFileAsText(file: File): Promise<string> {
   })
 }
 
+// FileUpload component
 const FileUpload = (props: FileUploadProps) => {
   const { register, accept, children } = props
   const inputRef = useRef<HTMLInputElement | null>(null)
@@ -56,9 +58,8 @@ const FileUpload = (props: FileUploadProps) => {
     </InputGroup>
   )
 }
-
 type FormValues = {
-  file_: File
+  file: File
 }
 
 export function Upload() {
@@ -73,13 +74,14 @@ export function Upload() {
   const [title, setTitle] = useState('')
 
   const onSubmit = handleSubmit((data) => {
-    if (!data.file_ || data.file_.length < 1) return
-    const selectedFile = readFileAsText(data.file_[0] as File)
+    if (!data.file ) return
+    const selectedFile = readFileAsText(data.file[0] as File)
       .then((fileContents) => {
         console.log(fileContents)
         setCircuitString(fileContents)
         setCircuit(fileContents)
         setTitle('Your Circuit')
+        //TODO currently can't render image
         const imgPromise = fetchQiskitDataFromApi(fileContents)
         imgPromise
           .then((resolvedValue) => {
@@ -100,8 +102,6 @@ export function Upload() {
       })
     console.log('On Submit: ', data)
     console.log('Selected file: ', selectedFile)
-
-    // set the selected file to a local state variable here.
   })
 
   const validateFiles = (value: File) => {
@@ -120,15 +120,15 @@ export function Upload() {
   return (
     <>
       <form onSubmit={onSubmit}>
-        <FormControl isInvalid={!!errors.file_} isRequired>
+        <FormControl isInvalid={!!errors.file} isRequired>
           <FormLabel>{'File input'}</FormLabel>
           <FileUpload
             accept='.qasm' // accepts .qasm files only
-            register={register('file_', { validate: validateFiles })}>
+            register={register('file', { validate: validateFiles })}>
             <Button leftIcon={<Icon as={FiFile} />}>Upload your QASM file</Button>
           </FileUpload>
 
-          <FormErrorMessage>{errors.file_ && errors?.file_.message}</FormErrorMessage>
+          <FormErrorMessage>{errors.file && errors?.file.message}</FormErrorMessage>
         </FormControl>
         <button>Upload Circuit</button>
       </form>
